@@ -1,0 +1,9 @@
+import { runVerification } from '../verification/VerificationService.js';
+const samples = {
+  'C->Java': { source:`#include <stdio.h>\nint main(){ int a,b; if(scanf("%d %d", &a,&b)!=2) return 0; printf("%d\\n", a+b); return 0; }`, target:`import java.util.*;\npublic class Main { public static void main(String[] args){ Scanner sc=new Scanner(System.in); int a=sc.nextInt(); int b=sc.nextInt(); System.out.println(a+b); } }` }
+};
+export function demoMigration({ sourceLanguage, targetLanguage, sourceCode }) {
+  const key=`${sourceLanguage}->${targetLanguage}`; const sample=samples[key];
+  if (sample) return { sourceLanguage,targetLanguage,sourceCode,generatedCode:sample.target,aiProvider:'demo',aiModel:'demo-fixture',aiReview:{valid:true,confidence:0.99,logicPreserved:true,syntaxValid:true,inputOutputEquivalent:true,issues:[],suggestions:[]},verification:{score:100,totalTests:2,passedTests:2,failedTests:0,compilationErrors:0,runtimeErrors:0,executionTime:3,status:'DEMO'},demo:true,testCases:[{name:'TC_01',input:'10 20',expectedOutput:'30',originalOutput:'30',actualOutput:'30',status:'PASS',executionTime:1,error:null},{name:'TC_02',input:'-2 5',expectedOutput:'3',originalOutput:'3',actualOutput:'3',status:'PASS',executionTime:1,error:null}]};
+  return { sourceLanguage,targetLanguage,sourceCode,generatedCode:'// Demo fixture unavailable for this pair. Configure Groq/Gemini for live translation.', aiProvider:'demo',aiModel:'demo-fixture',aiReview:{valid:false,confidence:0,logicPreserved:false,syntaxValid:false,inputOutputEquivalent:false,issues:['Live AI is not configured for this pair.'],suggestions:['Configure Groq or Gemini.']},verification:{score:0,totalTests:0,passedTests:0,failedTests:0,compilationErrors:0,runtimeErrors:0,executionTime:0,status:'DEMO'},demo:true,testCases:[]};
+}

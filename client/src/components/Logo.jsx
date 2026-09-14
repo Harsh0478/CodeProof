@@ -1,0 +1,2 @@
+import {ShieldCheck} from 'lucide-react';
+export default function Logo({compact=false}){return <div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-2xl bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/20"><ShieldCheck size={22}/></div>{!compact&&<div><div className="text-lg font-extrabold tracking-tight text-white">Code<span className="text-emerald-300">Proof</span></div><div className="text-[10px] font-medium uppercase tracking-[.18em] text-slate-400">AI-Verified Migration</div></div>}</div>}
