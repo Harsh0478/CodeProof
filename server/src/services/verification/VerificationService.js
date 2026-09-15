@@ -11,85 +11,106 @@ function normalizeOutput(value = '') {
 }
 
 function repeatedResult(test, status, error, executionTime = 0, originalOutput = '', actualOutput = '') {
-  const sourceOutput = normalizeOutput(originalOutput);
-  const targetOutput = normalizeOutput(actualOutput);
   return {
     ...test,
-    expectedOutput: sourceOutput,
-    originalOutput: sourceOutput,
-    actualOutput: targetOutput,
-    translatedOutput: targetOutput,
     status,
+    expectedOutput: normalizeOutput(originalOutput || test.expectedOutput || ''),
+    originalOutput: normalizeOutput(originalOutput),
+    actualOutput: normalizeOutput(actualOutput),
     error,
     executionTime
   };
 }
 
-export async function runVerification({ sourceLanguage, targetLanguage, sourceCode, generatedCode, tests }, executor = ExecutionService) {
+export async function runVerification({ sourceLanguage, targetLanguage, sourceCode, generatedCode, tests }) {
   const started = Date.now();
-  const safeTests = (Array.isArray(tests) ? tests : []).slice(0, 12).map((test, index) => ({
-    ...test,
-    name: `TC_${String(index + 1).padStart(2, '0')}`,
-    input: test?.input ?? ''
-  }));
-  const inputs = safeTests.map((test) => test.input);
+  const safeTests = Array.isArray(tests) ? tests : [];
+  const inputs = safeTests.map((test) => test.input ?? '');
+  const results = [];
 
-  if (!safeTests.length) {
-    return { results: [], totalTests: 0, passedTests: 0, failedTests: 0, compilationErrors: 0, runtimeErrors: 0, executionUnavailable: false, executionTime: Date.now() - started };
-  }
-
-  const [originalRuns, targetRuns] = await Promise.all([
-    executor.executeBatch(sourceLanguage, sourceCode, inputs),
-    executor.executeBatch(targetLanguage, generatedCode, inputs)
-  ]);
-
-  const sourceResults = Array.isArray(originalRuns) ? originalRuns : [];
-  const targetResults = Array.isArray(targetRuns) ? targetRuns : [];
+  // Compile each program once and execute its tests sequentially. Sequential execution
+  // avoids CPU contention inside the sandbox and keeps stdout/error association stable.
+  const originalRuns = await ExecutionService.executeBatch(sourceLanguage, sourceCode, inputs);
+  const targetRuns = await ExecutionService.executeBatch(targetLanguage, generatedCode, inputs);
 
   let compilationErrors = 0;
   let runtimeErrors = 0;
-  const executionUnavailable = sourceResults.some((r) => r?.status === 'UNAVAILABLE') || targetResults.some((r) => r?.status === 'UNAVAILABLE');
-  if (sourceResults[0]?.status === 'COMPILATION_ERROR') compilationErrors += 1;
-  if (targetResults[0]?.status === 'COMPILATION_ERROR') compilationErrors += 1;
+  let executionUnavailable = false;
 
-  const results = safeTests.map((test, index) => {
-    const original = sourceResults[index] || { status: 'UNAVAILABLE', stdout: '', stderr: 'Source execution did not return a result.', executionTime: 0 };
-    const target = targetResults[index] || { status: 'UNAVAILABLE', stdout: '', stderr: 'Target execution did not return a result.', executionTime: 0 };
-    const sourceOutput = normalizeOutput(original.stdout || '');
-    const targetOutput = normalizeOutput(target.stdout || '');
-    const executionTime = (original.executionTime || 0) + (target.executionTime || 0);
+  const originalCompilationFailure = originalRuns[0]?.status === 'COMPILATION_ERROR';
+  const targetCompilationFailure = targetRuns[0]?.status === 'COMPILATION_ERROR';
+  const originalUnavailable = originalRuns[0]?.status === 'UNAVAILABLE';
+  const targetUnavailable = targetRuns[0]?.status === 'UNAVAILABLE';
+
+  if (originalCompilationFailure) compilationErrors += 1;
+  if (targetCompilationFailure) compilationErrors += 1;
+  if (originalUnavailable || targetUnavailable) executionUnavailable = true;
+
+  for (let i = 0; i < safeTests.length; i += 1) {
+    const test = safeTests[i];
+    const original = originalRuns[i];
+    const target = targetRuns[i];
 
     if (original.status === 'UNAVAILABLE' || target.status === 'UNAVAILABLE') {
-      return repeatedResult(test, 'UNAVAILABLE', original.status === 'UNAVAILABLE' ? original.stderr : target.stderr, executionTime, sourceOutput, targetOutput);
-    }
-    if (original.status === 'COMPILATION_ERROR' || target.status === 'COMPILATION_ERROR') {
-      return repeatedResult(test, 'COMPILATION_ERROR', original.status === 'COMPILATION_ERROR' ? original.stderr : target.stderr, executionTime, sourceOutput, targetOutput);
-    }
-    if (original.status === 'RUNTIME_ERROR' || target.status === 'RUNTIME_ERROR') {
-      runtimeErrors += 1;
-      return repeatedResult(test, 'RUNTIME_ERROR', original.status === 'RUNTIME_ERROR' ? original.stderr : target.stderr, executionTime, sourceOutput, targetOutput);
+      results.push(repeatedResult(
+        test,
+        'UNAVAILABLE',
+        original.status === 'UNAVAILABLE' ? original.stderr : target.stderr,
+        (original.executionTime || 0) + (target.executionTime || 0),
+        original.stdout,
+        target.stdout
+      ));
+      continue;
     }
 
-    const pass = sourceOutput === targetOutput;
-    return {
+    if (original.status === 'COMPILATION_ERROR' || target.status === 'COMPILATION_ERROR') {
+      results.push(repeatedResult(
+        test,
+        'COMPILATION_ERROR',
+        original.status === 'COMPILATION_ERROR' ? original.stderr : target.stderr,
+        (original.executionTime || 0) + (target.executionTime || 0),
+        original.stdout,
+        target.stdout
+      ));
+      continue;
+    }
+
+    if (original.status === 'RUNTIME_ERROR' || target.status === 'RUNTIME_ERROR') {
+      runtimeErrors += 1;
+      results.push(repeatedResult(
+        test,
+        'RUNTIME_ERROR',
+        original.status === 'RUNTIME_ERROR' ? original.stderr : target.stderr,
+        (original.executionTime || 0) + (target.executionTime || 0),
+        original.stdout,
+        target.stdout
+      ));
+      continue;
+    }
+
+    const expected = normalizeOutput(original.stdout);
+    const actual = normalizeOutput(target.stdout);
+    const pass = expected === actual;
+
+    results.push({
       ...test,
-      expectedOutput: sourceOutput,
-      originalOutput: sourceOutput,
-      actualOutput: targetOutput,
-      translatedOutput: targetOutput,
+      expectedOutput: expected,
+      originalOutput: expected,
+      actualOutput: actual,
       status: pass ? 'PASS' : 'FAIL',
       error: pass ? null : 'Translated output differs from original behavior.',
-      executionTime
-    };
-  });
+      executionTime: (original.executionTime || 0) + (target.executionTime || 0)
+    });
+  }
 
   const comparable = results.filter((result) => result.status === 'PASS' || result.status === 'FAIL');
   const passedTests = comparable.filter((result) => result.status === 'PASS').length;
-  const failedTests = results.filter((result) => ['FAIL', 'COMPILATION_ERROR', 'RUNTIME_ERROR'].includes(result.status)).length;
+  const failedTests = results.filter((result) => result.status === 'FAIL' || result.status === 'UNAVAILABLE').length;
+  const totalTests = safeTests.length;
 
   return {
     results,
-    totalTests: results.length,
+    totalTests,
     passedTests,
     failedTests,
     compilationErrors,

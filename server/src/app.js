@@ -31,7 +31,7 @@ app.use('/api/languages',languages);
 app.use('/api/dashboard',dashboard);
 app.use('/api/test-cases',testCases);
 app.use('/api/samples',samples);
-app.get('/api/health',(req,res)=>res.json({success:true,status:'ok',time:new Date().toISOString(),services:{groq:Boolean(env.groqKey),gemini:Boolean(env.geminiKey),execution:env.executionMode,judge0:env.executionMode==='judge0' ? Boolean(env.judge0Url) : undefined}}));
+app.get('/api/health',(req,res)=>res.json({success:true,status:'ok',time:new Date().toISOString(),services:{groq:Boolean(env.groqKey),gemini:Boolean(env.geminiKey),execution:env.executionMode}}));
 app.use((req,res)=>res.status(404).json({success:false,error:{code:'NOT_FOUND',message:'Route not found.'}}));
 app.use(errorHandler);
 

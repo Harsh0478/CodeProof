@@ -1,7 +1,7 @@
 # Docker execution
 
 CodeProof currently uses hardened official language images directly:
-- `gcc:14` for C/C++
+- `gcc:14-alpine` for C/C++
 - `eclipse-temurin:21-jdk-alpine` for Java
 - `python:3.13-alpine` for Python
 - `php:8.5-cli-alpine` for PHP (Docker Official Image)
