@@ -105,7 +105,7 @@ export async function runVerification({ sourceLanguage, targetLanguage, sourceCo
 
   const comparable = results.filter((result) => result.status === 'PASS' || result.status === 'FAIL');
   const passedTests = comparable.filter((result) => result.status === 'PASS').length;
-  const failedTests = results.filter((result) => result.status === 'FAIL' || result.status === 'UNAVAILABLE').length;
+  const failedTests = results.filter((result) => result.status === 'FAIL').length;
   const totalTests = safeTests.length;
 
   return {

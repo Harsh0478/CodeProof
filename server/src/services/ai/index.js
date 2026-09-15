@@ -4,12 +4,11 @@ import { env } from '../../config/env.js';
 import { translationPrompt, reviewPrompt, testPrompt } from '../../prompts/translation.js';
 import { translationSchema, reviewSchema, testsSchema } from '../../prompts/schemas.js';
 
-import { cleanGeneratedCode } from '../../utils/codeNormalization.js';
 export async function translateWithFallback(input) {
-  try { const r = await GroqService.translate(translationPrompt(input), translationSchema); return { code:cleanGeneratedCode(r.code), provider:'groq', model:env.groqModel }; }
+  try { const r = await GroqService.translate(translationPrompt(input), translationSchema); return { code:r.code, provider:'groq', model:env.groqModel }; }
   catch (groqError) {
     if (!env.geminiKey) throw groqError;
-    const r = await GeminiService.translate(translationPrompt(input)); return { code:cleanGeneratedCode(r.code), provider:'gemini', model:env.geminiModel, fallbackFrom:groqError.code };
+    const r = await GeminiService.translate(translationPrompt(input)); return { code:r.code, provider:'gemini', model:env.geminiModel, fallbackFrom:groqError.code };
   }
 }
 
@@ -28,4 +27,3 @@ export async function generateTestsWithFallback(input) {
     return (await GeminiService.generateTests(testPrompt(input))).tests || [];
   }
 }
-

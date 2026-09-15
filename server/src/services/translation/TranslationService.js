@@ -6,6 +6,30 @@ import { runVerification } from '../verification/VerificationService.js';
 import { demoMigration } from '../translation/demo.js';
 import { requiresInput } from '../../utils/inputDependency.js';
 
+
+function normalizeGeneratedCode(code = '', language = '') {
+  let value = String(code).replace(/^\s*```(?:[\w#+.-]+)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+
+  // Some providers return the entire program as a partially escaped string, e.g.
+  // `\npublic class Main ... System.out.println(\"Even\");`.  That representation
+  // may already contain real line breaks too, so checking the number of real lines
+  // is not sufficient.  Detect the escaped-code signature and decode one layer.
+  const escapedNewlines = (value.match(/\\n/g) || []).length;
+  const escapedQuotes = (value.match(/\\"/g) || []).length;
+  const escapedTabs = (value.match(/\\t/g) || []).length;
+  const looksLikeEscapedProgram = escapedNewlines > 0 && (escapedQuotes > 0 || escapedTabs > 0);
+
+  if (looksLikeEscapedProgram) {
+    value = value
+      .replace(/\\r\\n/g, '\n')
+      .replace(/\\n/g, '\n')
+      .replace(/\\t/g, '\t')
+      .replace(/\\"/g, '"');
+  }
+
+  return value.trim();
+}
+
 export async function runTranslationPipeline({ sourceLanguage, targetLanguage, sourceCode, userId, userTests = [] }) {
   if (!findPair(sourceLanguage, targetLanguage)) throw new AppError('Unsupported language pair.', 422, 'UNSUPPORTED_PAIR');
   if (!sourceCode?.trim()) throw new AppError('Source code cannot be empty.', 422, 'EMPTY_CODE');
@@ -14,11 +38,7 @@ export async function runTranslationPipeline({ sourceLanguage, targetLanguage, s
   if (env.demoMode && !process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY) return demoMigration({ sourceLanguage, targetLanguage, sourceCode });
 
   const translated = await translateWithFallback({ sourceLanguage, targetLanguage, sourceCode });
-  if (sourceLanguage === 'COBOL' && targetLanguage === 'Java') {
-    // COBOL DISPLAY advances to the next line by default. Prefer println so the
-    // translated Java preserves the observable console behavior.
-    translated.code = translated.code.replace(/\bSystem\.out\.print\(/g, 'System.out.println(');
-  }
+  translated.code = normalizeGeneratedCode(translated.code, targetLanguage);
   const aiReview = await reviewWithFallback({ sourceLanguage, targetLanguage, sourceCode, generatedCode: translated.code });
   const generated = await generateTestsWithFallback({ sourceLanguage, targetLanguage, sourceCode });
   const inputDependent = requiresInput(sourceLanguage, sourceCode);
