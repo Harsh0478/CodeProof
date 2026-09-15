@@ -16,12 +16,12 @@ const configs = {
 };
 
 const judge0LanguageIds = {
-  C: 103,
-  'C++': 105,
-  Java: 91,
-  Python: 109,
-  PHP: 98,
-  COBOL: 77,
+  // Official Judge0 CE language IDs (v1.13.x). COBOL is not included in CE.
+  C: 48,
+  'C++': 52,
+  Java: 62,
+  Python: 71,
+  PHP: 68,
 };
 
 const judge0TerminalStatuses = new Set([3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
@@ -73,7 +73,7 @@ async function judge0Request(url, options = {}) {
 async function judge0Submit(language, code, input = '') {
   const languageId = judge0LanguageIds[language];
   if (!languageId) {
-    return { status: 'UNAVAILABLE', stdout: '', stderr: `${language} execution is not available on the configured Judge0 instance.`, executionTime: 0, compilation: false };
+    return { status: 'UNAVAILABLE', stdout: '', stderr: `${language} execution is not available on the configured Judge0 CE instance. Use a Judge0 Extra/self-hosted endpoint for this language.`, executionTime: 0, compilation: false };
   }
 
   const started = Date.now();
