@@ -716,43 +716,6 @@ and easy to explain.
 - Explainable verification reports
 - Scalable distributed execution
 
-## 🎓 Viva Quick Questions
-
-**Why use AI?**  
-AI reduces manual translation time and maps syntax/programming idioms
-between languages.
-
-**Why verify after translation?**  
-Generated code can look correct while changing runtime behavior.
-
-**Why execute both programs?**  
-Behavioral comparison needs observable execution evidence, not only
-source-code similarity.
-
-**Why Docker?**  
-User and AI-generated code is untrusted and needs controlled execution.
-
-**Why Groq + Gemini?**  
-Multiple providers support primary, fallback and/or review paths and
-improve resilience.
-
-**What is the verification score?**  
-`(Passed Tests / Total Tests) × 100`
-
-**Does 100% mean complete correctness?**  
-No. It means the tested behaviors matched.
-
-**Why MongoDB?**  
-It provides flexible document storage for translations, tests, results
-and samples.
-
-**Why Clerk?**  
-It provides authentication and session infrastructure without building a
-complete custom authentication system.
-
-**What is the strongest feature?**  
-Independent behavioral verification after AI translation.
-
 ## 🧠 One-Line Explanation
 
 > **CodeProof uses AI to translate legacy code, reviews the generated
