@@ -758,8 +758,10 @@ If credentials are exposed, rotate them immediately.
 
 ## 📜 License
 
-Add your institution/project-specific license here before publishing the
-repository.
+Project: CodeProof
+Academic Year: 2026–27
+
+CodeProof is an academic software project developed for educational and demonstration purposes. The project is released under the MIT License. Third-party libraries, frameworks, APIs, and services used by this project are subject to their respective licenses and terms of use.
 
 ------------------------------------------------------------------------
 
