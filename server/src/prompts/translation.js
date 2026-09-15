@@ -8,7 +8,10 @@ Requirements:
 5. Do not invent functionality.
 6. Do not remove required functionality.
 7. Use equivalent language constructs when direct syntax differs.
-8. Return only the translated source code in the "code" field.
+8. Preserve exact observable console output, including spaces, capitalization, punctuation, line breaks and fixed-width/leading-zero numeric formatting.
+9. For COBOL PIC 9(n) / PIC 9(n) VALUE fields displayed with DISPLAY, preserve the field width and leading zeros in the target language.
+10. If the source reads standard input, the target must read the same values from standard input in the same order.
+11. Return only the translated source code in the "code" field.
 
 SOURCE LANGUAGE: ${sourceLanguage}
 TARGET LANGUAGE: ${targetLanguage}

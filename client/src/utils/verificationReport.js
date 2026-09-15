@@ -8,9 +8,12 @@ function esc(value='') {
 }
 
 export function downloadVerificationReport({ translation, verification, tests = [], filename }) {
-  const score = verification?.score ?? translation?.verificationScore ?? 0;
+  const unavailable = Boolean(verification?.executionUnavailable);
+  const score = verification?.score ?? translation?.verificationScore ?? null;
   const passed = verification?.passedTests ?? tests.filter(t => t.status === 'PASS').length;
   const total = verification?.totalTests ?? tests.length;
+  const scoreText = unavailable || score == null ? '—' : `${score}%`;
+  const testsText = unavailable ? `—/${total}` : `${passed}/${total}`;
   const aiConfidence = verification?.aiConfidence != null ? `${Math.round(verification.aiConfidence * 100)}%` : '—';
   const generatedAt = new Date().toLocaleString();
 
@@ -26,11 +29,13 @@ export function downloadVerificationReport({ translation, verification, tests = 
 
   const issues = verification?.issues || verification?.aiReview?.issues || [];
   const failed = tests.filter(t => !['PASS','PASSED','VERIFIED'].includes(String(t.status || '').toUpperCase()));
-  const explanation = score === 100 && failed.length === 0
-    ? 'All comparable tests passed and no behavioral mismatch was recorded.'
-    : failed.length
-      ? `Verification needs review because ${failed.length} test case(s) did not pass. Review the detailed errors below and compare the original and generated outputs.`
-      : 'Verification did not reach 100%. Review the AI findings and behavioral evidence.';
+  const explanation = unavailable
+    ? 'Behavioral verification was not established because the execution sandbox was unavailable. Start Docker Desktop and run verification again.'
+    : score === 100 && failed.length === 0
+      ? 'All comparable tests passed and no behavioral mismatch was recorded.'
+      : failed.length
+        ? `Verification needs review because ${failed.length} test case(s) did not pass. Review the detailed errors below and compare the original and generated outputs.`
+        : 'Verification did not reach 100%. Review the AI findings and behavioral evidence.';
 
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(filename || 'CodeProof Verification Report')}</title>
   <style>
@@ -45,9 +50,9 @@ export function downloadVerificationReport({ translation, verification, tests = 
   </style></head><body><div class="wrap">
   <section class="header"><div class="muted">CodeProof · AI-Verified Legacy Code Migration</div><h1>${esc(translation?.sourceLanguage)} → ${esc(translation?.targetLanguage)}</h1><div class="muted">Generated ${esc(generatedAt)}</div></section>
   <section class="card"><h2>Verification summary</h2><div class="grid">
-    <div class="metric">Verification score<b>${score}%</b></div><div class="metric">Tests<b>${passed}/${total}</b></div><div class="metric">Compilation errors<b>${verification?.compilationErrors ?? 0}</b></div><div class="metric">Runtime errors<b>${verification?.runtimeErrors ?? 0}</b></div>
+    <div class="metric">Verification score<b>${scoreText}</b></div><div class="metric">Tests<b>${testsText}</b></div><div class="metric">Compilation errors<b>${verification?.compilationErrors ?? 0}</b></div><div class="metric">Runtime errors<b>${verification?.runtimeErrors ?? 0}</b></div>
   </div><div class="grid" style="margin-top:12px"><div class="metric">Execution time<b>${verification?.executionTime ?? 0} ms</b></div><div class="metric">AI confidence<b>${aiConfidence}</b></div><div class="metric">Status<b>${esc(translation?.status || '—')}</b></div><div class="metric">Provider<b>${esc(translation?.aiProvider || '—')}</b></div></div></section>
-  <section class="card"><h2>Why did verification ${score === 100 ? 'pass' : 'need review'}?</h2><p>${esc(explanation)}</p>${issues.length ? `<div class="why"><strong>AI findings:</strong><ul>${issues.map(i=>`<li>${esc(i)}</li>`).join('')}</ul></div>`:''}</section>
+  <section class="card"><h2>${unavailable ? 'Why verification was unavailable' : `Why did verification ${score === 100 ? 'pass' : 'need review'}?`}</h2><p>${esc(explanation)}</p>${issues.length ? `<div class="why"><strong>AI findings:</strong><ul>${issues.map(i=>`<li>${esc(i)}</li>`).join('')}</ul></div>`:''}</section>
   <section class="card"><div class="codegrid"><div><h2>Source code</h2><div class="code"><pre>${esc(translation?.sourceCode || '')}</pre></div></div><div><h2>Generated code</h2><div class="code"><pre>${esc(translation?.generatedCode || '')}</pre></div></div></div></section>
   <section class="card"><h2>Behavioral test evidence</h2><table><thead><tr><th>Test</th><th>Input</th><th>Expected</th><th>Actual</th><th>Status</th><th>Error</th></tr></thead><tbody>${rows || '<tr><td colspan="6">No test cases recorded.</td></tr>'}</tbody></table></section>
   <div class="footer">CodeProof · Translate. Execute. Compare. Prove.</div></div></body></html>`;
