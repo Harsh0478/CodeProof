@@ -1,1 +1,7 @@
-import { Router } from 'express'; import { stats } from '../controllers/dashboardController.js'; import { requireAuth } from '../middleware/auth.js'; import { asyncHandler } from '../utils/asyncHandler.js'; const r=Router(); r.get('/stats',requireAuth,asyncHandler(stats)); export default r;
+import { Router } from "express";
+import { stats } from "../controllers/dashboardController.js";
+import { requireAuth } from "../middleware/auth.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+const r = Router();
+r.get("/stats", requireAuth, asyncHandler(stats));
+export default r;
