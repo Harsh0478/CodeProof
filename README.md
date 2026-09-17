@@ -1,5 +1,4 @@
-# CodeProof
-### AI-Verified Legacy Code Migration
+# <h1 align="center">📚 CodeProof - AI-Verified Legacy Code Migration</h1>
 
 CodeProof is a MERN application for migrating legacy source code and proving, as far as executable tests can establish, that the translated program preserves the original behavior.
 
